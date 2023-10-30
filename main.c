@@ -1,74 +1,256 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <ctype.h> 
+#include <time.h>
 
-#define COLUMNS 120
-#define ROWS 200
+#define SUCCESS 100;
+#define INVALID_INPUT_PARAMETER 101;
+#define FILE_ERROR 102;
 
-typedef struct {
-    char cells[COLUMNS];
-} Area;
+char* init_generation(int size) {
+    if (size < 0){
+        return NULL;
+    }
 
-// making rule 110 for start
-void calculate_next_generation(Area *previous, Area *current, char rule_byte){
+    char* gen = (char*)calloc(size, size*sizeof(char));
+    if (gen == NULL) {
+        return NULL;
+    }
+    return gen;
+}
 
-    for (int i = 0; i < COLUMNS; i++){
+int reset_generation(char* gen, int columns){
+    if(gen == NULL){
+        return INVALID_INPUT_PARAMETER;
+    }
+    else{
+        for (int i = 0; i < columns; i++){
+            gen[i] = 0;
+        }
+    }
+    return SUCCESS;
+}
+
+int random_fill_generation(char* gen, int columns){
+    if(gen == NULL){
+        return INVALID_INPUT_PARAMETER;
+    }
+    else{
+        for(int i = 0; i <columns;i++)
+        gen[i] = (rand() % (2)); 
+    }
+    return SUCCESS;
+}
+
+void calculate_next_generation(char* previous, char* current, char rule_byte, int columns){
+     for (int i = columns; i < 2*columns; i++){
         // determine which of the eight breeding rules apply
-        char state_byte = (previous->cells[(i-1)%COLUMNS] << 2) + (previous->cells[i] << 1) + (previous->cells[(i+1)%COLUMNS]);
+        char state_byte = (previous[(i-1)%columns] << 2) + (previous[i%columns] << 1) + (previous[(i+1)%columns]);
 
-        if((rule_byte >> state_byte) & 1 == 1){
-            current->cells[i] = 1;
+        if(((rule_byte >> state_byte) & 1) == 1){
+            current[i%columns] = 1;
             continue;
         }
-        current->cells[i] = 0;
+        current[i%columns] = 0;
     }
 }
 
-void print_generation(Area *state){
-    for (int i = 0; i < COLUMNS; i++){
-	if(state->cells[i] == 1){
+void print_generation(char* state, int columns){
+    for (int i = 0; i < columns; i++){
+	if(state[i] == 1){
 	    printf("#");
 	}else{
-	    printf(",");
+	    printf(" ");
 	}
     }
     printf("\n");
 }
 
-int main(int argc, char *argv[])
-{
-    Area* last_generation;
-    Area* current_generation;
-
-    char rule_byte = 110;
-
-    if (argc != 1){
-        rule_byte = atoi(argv[1])%256;
-        printf("arguments: %d\n", argc);
+void print_generation_to_file(char* state, int columns, FILE *fp){
+    for (int i = 0; i < columns; i++){
+	if(state[i] == 1){
+	    fprintf(fp, "#");
+	}else{
+	    fprintf(fp, " ");
+	}
     }
+    fprintf(fp, "\n");
+}
 
-    last_generation = malloc(sizeof(Area));
-    current_generation = malloc(sizeof(Area));
-
-    // initialise both generations to all 0
-    for (int i = 0; i < COLUMNS; i++){
-        last_generation->cells[i] = 0;
-        current_generation->cells[i]= 0;
+int decimal_to_binary(int decimal, char* binary){
+    // can make this however big. this is making an error with all the pedantics and stuff, maybe init properly and fill with something
+    int remainder; 
+    int leftover = decimal;
+    for(int i = 8;i>0;i--){
+        // find value of byte starting with leftmost
+        remainder = leftover%2;
+        // add value of byte to string
+        binary[i]=remainder;
+        // get rid of that byte as we have processed it
+        leftover = remainder/2;
     }
+    return SUCCESS;
+}
 
-    //starting state sets the center to a 1
-    current_generation->cells[COLUMNS/2] = 1;
+// takes string as leading 0's change input if it's an int e.g 00101 = 65 whereas atoi would use 101
+int binary_to_decimal(char num[]){
+    if(isdigit(num[0])){
+        int binary = atoi(num);
+        int decimal = 0;
+        int power_of_two=1;
+        while(binary!=0){
+            // get rightmost value
+            int last_byte = binary%10;
+            // get rid of rightmost value now that we have it
+            binary = binary/10;
+            // do rightmost value multiplied by corresponding power of 2 and add to total
+            decimal = decimal + (last_byte*power_of_two);
+            // increase power of 2 by 1 power
+            power_of_two = power_of_two*2;
+        }
+    }
+    else
+        printf("Invalid input");
+    return SUCCESS;
+}
 
+int run(char *current_gen, char *last_gen, int columns, int rows, int rule){
     struct timespec remaining, request = { 0, 16000000 };
-
-    print_generation(current_generation);
-    nanosleep(&request, &remaining);
-    for (int i = 0; i < ROWS-1; i++){
-        Area *temp = last_generation;
-        last_generation = current_generation;
-        current_generation = temp;
-        calculate_next_generation(last_generation, current_generation, rule_byte);
-        print_generation(current_generation);
+    print_generation(current_gen, columns);
+    for (int i = 0; i < rows-1; i++){
+        char *temp = last_gen;
+        last_gen = current_gen;
+        current_gen = temp;
+        calculate_next_generation(last_gen, current_gen, rule, columns);
+        print_generation(current_gen, columns);
         nanosleep(&request, &remaining);
     }
+    return SUCCESS;
+}
+
+int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int rule){
+    struct timespec remaining, request = { 0, 16000000 };
+    FILE *fp = NULL;
+    // could let them choose file name
+    fp = fopen("cellular-automata.txt", "w");
+    if(fp!=NULL){
+        print_generation(current_gen, columns);
+        print_generation_to_file(current_gen, columns, fp);
+        for (int i = 0; i < rows-1; i++){
+            char *temp = last_gen;
+            last_gen = current_gen;
+            current_gen = temp;
+            calculate_next_generation(last_gen, current_gen, rule, columns);
+            print_generation(current_gen, columns);
+            print_generation_to_file(current_gen, columns, fp);
+            nanosleep(&request, &remaining);
+        }
+    }
+    else{
+        return FILE_ERROR;
+    }
+    fclose(fp);
+    return SUCCESS;
+}
+
+int main()
+{
+    int rule;
+    int columns=100; 
+    int rows=100;
+    int print;
+    char* last_gen = init_generation(columns);
+    char* current_gen = init_generation(columns);
+    srand(time(NULL));
+
+    int choice;
+
+    while (1) {
+        printf("---- Menu ----\n");
+        printf("1. Print a stock 1D Cellular automaton\n");
+        printf("2. Print a random 1D cellular automaton\n");
+        printf("3. Print your choice of 1D cellular automaton\n");
+        printf("4. Quit\n");
+        printf("Enter your choice:\n");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                rule = 110; 
+                current_gen[columns/2] = 1;
+                printf("Would you like to print the results to a file? 1=Y, other = N\n");
+                scanf("%d", &print);
+                if(print == 1){
+                    run_and_print(current_gen, last_gen, columns, rows, rule);
+                }
+                else{
+                    run(current_gen, last_gen, columns, rows, rule);
+                }
+                while(getchar()!= '\n');
+                reset_generation(last_gen, columns);
+                reset_generation(current_gen, columns);
+                break;
+            case 2:
+                // from https://www.geeksforgeeks.org/generating-random-number-range-c/
+                rule = (rand() % (256)); 
+                random_fill_generation(current_gen, columns);
+                printf("Would you like to print the results to a file? 1=Y, other = N\n");
+                scanf("%d", &print);
+                if(print == 1){
+                    run_and_print(current_gen, last_gen, columns, rows, rule);
+                    print = 0;
+                }
+                else{
+                    run(current_gen, last_gen, columns, rows, rule);
+                }
+                while(getchar()!= '\n');
+                reset_generation(last_gen, columns);
+                reset_generation(current_gen, columns);
+                break;
+            case 3:
+                printf("Enter desired number of cells in a generation \n");
+                scanf("%d", &columns);
+                current_gen = realloc(current_gen, columns);
+                last_gen = realloc(last_gen, columns);
+                reset_generation(last_gen, columns);
+                while(getchar()!= '\n');
+                printf("Enter desired number of generations to run\n");
+                scanf("%d", &rows);
+                while(getchar()!= '\n');
+                printf("Enter desired rule number in decimal to be adhered to \n");
+                scanf("%d", &rule);
+                while(getchar()!= '\n');
+                printf("Enter desired seed generation in 1's and 0's without spaces (enter 2 for stock seed generation) \n");
+
+                // Should just need to take user input and stick it into current gen but cant get it to work.
+
+                printf("Would you like to print the results to a file? 1=Y, other = N\n");
+                scanf("%d", &print);
+                if(print == 1){
+                    run_and_print(current_gen, last_gen, columns, rows, rule);
+                    print = 0;
+                }
+                else{
+                    run(current_gen, last_gen, columns, rows, rule);
+                }
+                while(getchar()!= '\n');
+                columns = 100;
+                rows = 100;
+                current_gen = realloc(current_gen, columns);
+                last_gen = realloc(last_gen, columns);
+                reset_generation(last_gen, columns);
+                reset_generation(current_gen, columns);
+                break;
+            case 4:
+                printf("Goodbye!\n");
+                return 0;
+            default:
+                printf("Invalid choice. Please enter a valid option.\n");
+                while(getchar()!= '\n');
+        }
+    }
+    free(last_gen);
+    free(current_gen);
+    return SUCCESS;
 }
