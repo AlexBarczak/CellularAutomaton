@@ -20,17 +20,12 @@ char* init_generation(int size) {
     return gen;
 }
 
-int reset_generation(char* gen, int columns){
-    if(gen == NULL){
-        return INVALID_INPUT_PARAMETER;
+void reset_generation(char* gen, int columns){
+    for (int i = 0; i < columns; i++){
+        gen[i] = 0;
     }
-    else{
-        for (int i = 0; i < columns; i++){
-            gen[i] = 0;
-        }
-    }
-    return SUCCESS;
 }
+
 
 int random_fill_generation(char* gen, int columns){
     if(gen == NULL){
@@ -69,17 +64,16 @@ void print_generation(char* state, int columns){
 
 void print_generation_to_file(char* state, int columns, FILE *fp){
     for (int i = 0; i < columns; i++){
-	if(state[i] == 1){
-	    fprintf(fp, "#");
-	}else{
-	    fprintf(fp, " ");
-	}
+	    if(state[i] == 1){
+	        fprintf(fp, "#");
+	    }else{
+	        fprintf(fp, " ");
+	    }
     }
     fprintf(fp, "\n");
 }
 
 int decimal_to_binary(int decimal, char* binary){
-    // can make this however big. this is making an error with all the pedantics and stuff, maybe init properly and fill with something
     int remainder; 
     int leftover = decimal;
     for(int i = 8;i>0;i--){
@@ -107,11 +101,11 @@ int binary_to_decimal(char num[]){
             // do rightmost value multiplied by corresponding power of 2 and add to total
             decimal = decimal + (last_byte*power_of_two);
             // increase power of 2 by 1 power
-            power_of_two = power_of_two*2;
+            power_of_two = power_of_two << 1;
         }
     }
     else
-        printf("Invalid input");
+        return INVALID_INPUT_PARAMETER;
     return SUCCESS;
 }
 
@@ -159,9 +153,13 @@ int main()
     int rule;
     int columns=100; 
     int rows=100;
-    int print;
+    int print=0;
     char* last_gen = init_generation(columns);
     char* current_gen = init_generation(columns);
+    if(current_gen == NULL || last_gen == NULL)
+    {
+        return INVALID_INPUT_PARAMETER;
+    }
     srand(time(NULL));
 
     int choice;
@@ -199,7 +197,6 @@ int main()
                 scanf("%d", &print);
                 if(print == 1){
                     run_and_print(current_gen, last_gen, columns, rows, rule);
-                    print = 0;
                 }
                 else{
                     run(current_gen, last_gen, columns, rows, rule);
@@ -209,42 +206,48 @@ int main()
                 reset_generation(current_gen, columns);
                 break;
             case 3:
+                // need input validation
                 printf("Enter desired number of cells in a generation \n");
                 scanf("%d", &columns);
                 current_gen = realloc(current_gen, columns);
                 last_gen = realloc(last_gen, columns);
+                // check NULL
                 reset_generation(last_gen, columns);
                 while(getchar()!= '\n');
+                // need input validation
                 printf("Enter desired number of generations to run\n");
                 scanf("%d", &rows);
                 while(getchar()!= '\n');
+                // need input validation
                 printf("Enter desired rule number in decimal to be adhered to \n");
                 scanf("%d", &rule);
                 while(getchar()!= '\n');
+                // need everything
                 printf("Enter desired seed generation in 1's and 0's without spaces (enter 2 for stock seed generation) \n");
-
-                // Should just need to take user input and stick it into current gen but cant get it to work.
-
+                char* user_input = (char*)malloc(columns*sizeof(char));
+                // check NULL
+                fgets(user_input, columns, stdin);
                 printf("Would you like to print the results to a file? 1=Y, other = N\n");
                 scanf("%d", &print);
                 if(print == 1){
-                    run_and_print(current_gen, last_gen, columns, rows, rule);
-                    print = 0;
+                    run_and_print(user_input, last_gen, columns, rows, rule);
                 }
                 else{
-                    run(current_gen, last_gen, columns, rows, rule);
+                    run(user_input, last_gen, columns, rows, rule);
                 }
                 while(getchar()!= '\n');
+                free(user_input);
                 columns = 100;
                 rows = 100;
                 current_gen = realloc(current_gen, columns);
                 last_gen = realloc(last_gen, columns);
+                // check NULL
                 reset_generation(last_gen, columns);
                 reset_generation(current_gen, columns);
                 break;
             case 4:
                 printf("Goodbye!\n");
-                return 0;
+                return SUCCESS;
             default:
                 printf("Invalid choice. Please enter a valid option.\n");
                 while(getchar()!= '\n');
