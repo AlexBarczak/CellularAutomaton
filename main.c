@@ -9,10 +9,6 @@
 #define FILE_ERROR 102;
 
 char* init_generation(int size) {
-    if (size < 0){
-        return NULL;
-    }
-
     char* gen = (char*)calloc(size, size*sizeof(char));
     if (gen == NULL) {
         return NULL;
@@ -53,6 +49,8 @@ void calculate_next_generation(char* previous, char* current, char rule_byte, in
 
 void print_generation(char* state, int columns){
     for (int i = 0; i < columns; i++){
+    // its this bit that breaks for user input, idk why it doesnt work with user input, it's like it cant do the comparison for some reason
+    // if I change it to '1' then it works for first gen but the whole run function doesnt work since it's looking for 1's and 0's
 	if(state[i] == 1){
 	    printf("#");
 	}else{
@@ -100,7 +98,7 @@ int binary_to_decimal(char num[]){
             binary = binary/10;
             // do rightmost value multiplied by corresponding power of 2 and add to total
             decimal = decimal + (last_byte*power_of_two);
-            // increase power of 2 by 1 power
+            // increase power of 2 by 1 power of 2
             power_of_two = power_of_two << 1;
         }
     }
@@ -126,7 +124,6 @@ int run(char *current_gen, char *last_gen, int columns, int rows, int rule){
 int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int rule){
     struct timespec remaining, request = { 0, 16000000 };
     FILE *fp = NULL;
-    // could let them choose file name
     fp = fopen("cellular-automata.txt", "w");
     if(fp!=NULL){
         print_generation(current_gen, columns);
@@ -148,12 +145,41 @@ int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int 
     return SUCCESS;
 }
 
+int get_int(char variable[]){
+    int user_input=0;
+    while(user_input<1){
+        printf("%s \n", variable);
+        scanf("%d", &user_input);
+        while(getchar()!= '\n');
+        if(user_input<1){
+            printf("Invalid input, try again\n");
+        }
+    }
+}
+
+char* resize_generation(char* gen, int size) {
+    gen = (char*)realloc(gen, size*(sizeof(char)));
+    if (gen == NULL) {
+        return NULL;
+    }
+    return gen;
+}
+
+char* get_user_gen(int columns){
+    char* user_input = (char*)malloc((columns+1)*sizeof(char));
+    if(user_input==NULL){
+    return NULL;
+    }
+    fgets(user_input, (columns+1), stdin);
+    return user_input;
+}
+
 int main()
 {
     int rule;
     int columns=100; 
     int rows=100;
-    int print=0;
+    int print;
     char* last_gen = init_generation(columns);
     char* current_gen = init_generation(columns);
     if(current_gen == NULL || last_gen == NULL)
@@ -177,15 +203,16 @@ int main()
             case 1:
                 rule = 110; 
                 current_gen[columns/2] = 1;
-                printf("Would you like to print the results to a file? 1=Y, other = N\n");
-                scanf("%d", &print);
+
+                // make this a funtion since its ugly in here
+                print = get_int("Would you like to print the results to a file? 1=Y, 2+ = N");
                 if(print == 1){
                     run_and_print(current_gen, last_gen, columns, rows, rule);
                 }
                 else{
                     run(current_gen, last_gen, columns, rows, rule);
                 }
-                while(getchar()!= '\n');
+
                 reset_generation(last_gen, columns);
                 reset_generation(current_gen, columns);
                 break;
@@ -193,57 +220,48 @@ int main()
                 // from https://www.geeksforgeeks.org/generating-random-number-range-c/
                 rule = (rand() % (256)); 
                 random_fill_generation(current_gen, columns);
-                printf("Would you like to print the results to a file? 1=Y, other = N\n");
-                scanf("%d", &print);
+
+                // make this a funtion since its ugly in here
+                print = get_int("Would you like to print the results to a file? 1=Y, 2+ = N");
                 if(print == 1){
                     run_and_print(current_gen, last_gen, columns, rows, rule);
                 }
                 else{
                     run(current_gen, last_gen, columns, rows, rule);
                 }
-                while(getchar()!= '\n');
+
                 reset_generation(last_gen, columns);
                 reset_generation(current_gen, columns);
                 break;
             case 3:
-                // need input validation
-                printf("Enter desired number of cells in a generation \n");
-                scanf("%d", &columns);
-                current_gen = realloc(current_gen, columns);
-                last_gen = realloc(last_gen, columns);
-                // check NULL
+                columns = get_int("Enter desired number of cells per generation");
+                last_gen = resize_generation(last_gen, columns);
                 reset_generation(last_gen, columns);
-                while(getchar()!= '\n');
-                // need input validation
-                printf("Enter desired number of generations to run\n");
-                scanf("%d", &rows);
-                while(getchar()!= '\n');
-                // need input validation
-                printf("Enter desired rule number in decimal to be adhered to \n");
-                scanf("%d", &rule);
-                while(getchar()!= '\n');
-                // need everything
+                rows = get_int("Enter desired number of generations to run");
+                rule = get_int("Enter desired rule to be adhered to");
                 printf("Enter desired seed generation in 1's and 0's without spaces (enter 2 for stock seed generation) \n");
-                char* user_input = (char*)malloc(columns*sizeof(char));
-                // check NULL
-                fgets(user_input, columns, stdin);
-                printf("Would you like to print the results to a file? 1=Y, other = N\n");
-                scanf("%d", &print);
+                char* user_input = get_user_gen(columns);
+
+                // same problem as the other user input compare
+                if(user_input[0] == '2'){
+                    reset_generation(user_input, columns);
+                    user_input[columns/2] =1;
+                }
+
+                // make this a funtion since its ugly in here
+                print = get_int("Would you like to print the results to a file? 1=Y, 2+=N");
                 if(print == 1){
                     run_and_print(user_input, last_gen, columns, rows, rule);
                 }
                 else{
                     run(user_input, last_gen, columns, rows, rule);
                 }
-                while(getchar()!= '\n');
+
                 free(user_input);
                 columns = 100;
                 rows = 100;
-                current_gen = realloc(current_gen, columns);
-                last_gen = realloc(last_gen, columns);
-                // check NULL
+                last_gen = resize_generation(last_gen, columns);
                 reset_generation(last_gen, columns);
-                reset_generation(current_gen, columns);
                 break;
             case 4:
                 printf("Goodbye!\n");
