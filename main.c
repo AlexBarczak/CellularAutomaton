@@ -168,10 +168,20 @@ char* resize_generation(char* gen, int size) {
 char* get_user_gen(int columns){
     char* user_input = (char*)malloc((columns+1)*sizeof(char));
     if(user_input==NULL){
-    return NULL;
+        return NULL;
     }
     fgets(user_input, (columns+1), stdin);
-    return user_input;
+    char* user_input_nums = (char*)calloc(columns, columns*sizeof(char));
+    if(user_input_nums==NULL){
+        return NULL;
+    }
+    for(int i = 0;i<columns;i++){
+        if(user_input[i] == '#'){
+            user_input_nums[i] = 1;
+        }
+    }
+    free(user_input);
+    return user_input_nums;
 }
 
 int main()
@@ -218,7 +228,7 @@ int main()
                 break;
             case 2:
                 // from https://www.geeksforgeeks.org/generating-random-number-range-c/
-                rule = (rand() % (256)); 
+                rule = (rand()%256); 
                 random_fill_generation(current_gen, columns);
 
                 // make this a funtion since its ugly in here
@@ -238,15 +248,10 @@ int main()
                 last_gen = resize_generation(last_gen, columns);
                 reset_generation(last_gen, columns);
                 rows = get_int("Enter desired number of generations to run");
-                rule = get_int("Enter desired rule to be adhered to");
-                printf("Enter desired seed generation in 1's and 0's without spaces (enter 2 for stock seed generation) \n");
+                rule = (get_int("Enter desired rule to be adhered to"))%256;
+                printf("Enter desired seed generation in #s and blank spaces (enter 2 for stock seed generation) \n");
                 char* user_input = get_user_gen(columns);
-
-                // same problem as the other user input compare
-                if(user_input[0] == '2'){
-                    reset_generation(user_input, columns);
-                    user_input[columns/2] =1;
-                }
+                // add the bit to make it stock
 
                 // make this a funtion since its ugly in here
                 print = get_int("Would you like to print the results to a file? 1=Y, 2+=N");
@@ -256,7 +261,7 @@ int main()
                 else{
                     run(user_input, last_gen, columns, rows, rule);
                 }
-
+                
                 free(user_input);
                 columns = 100;
                 rows = 100;
