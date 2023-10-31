@@ -16,10 +16,14 @@ char* init_generation(int size) {
     return gen;
 }
 
-void reset_generation(char* gen, int columns){
+int reset_generation(char* gen, int columns){
+    if(gen == NULL){
+        return INVALID_INPUT_PARAMETER;
+    }
     for (int i = 0; i < columns; i++){
         gen[i] = 0;
     }
+    return SUCCESS;
 }
 
 
@@ -49,8 +53,6 @@ void calculate_next_generation(char* previous, char* current, char rule_byte, in
 
 void print_generation(char* state, int columns){
     for (int i = 0; i < columns; i++){
-    // its this bit that breaks for user input, idk why it doesnt work with user input, it's like it cant do the comparison for some reason
-    // if I change it to '1' then it works for first gen but the whole run function doesnt work since it's looking for 1's and 0's
 	if(state[i] == 1){
 	    printf("#");
 	}else{
@@ -72,20 +74,21 @@ void print_generation_to_file(char* state, int columns, FILE *fp){
 }
 
 int decimal_to_binary(int decimal, char* binary){
+    // maybe an input error check
     int remainder; 
     int leftover = decimal;
-    for(int i = 8;i>0;i--){
-        // find value of byte starting with leftmost
+    // prob change so it works for bigger nums
+    for(int i = 7;i>-1;i--){
+        // find value of byte starting with rightmost
         remainder = leftover%2;
         // add value of byte to string
         binary[i]=remainder;
         // get rid of that byte as we have processed it
-        leftover = remainder/2;
+        leftover = leftover/2;
     }
     return SUCCESS;
 }
 
-// takes string as leading 0's change input if it's an int e.g 00101 = 65 whereas atoi would use 101
 int binary_to_decimal(char num[]){
     if(isdigit(num[0])){
         int binary = atoi(num);
@@ -146,12 +149,12 @@ int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int 
 }
 
 int get_int(char variable[]){
-    int user_input=0;
-    while(user_input<1){
+    int user_input=-1;
+    while(user_input<0){
         printf("%s \n", variable);
         scanf("%d", &user_input);
         while(getchar()!= '\n');
-        if(user_input<1){
+        if(user_input<0){
             printf("Invalid input, try again\n");
         }
     }
@@ -171,6 +174,7 @@ char* get_user_gen(int columns){
         return NULL;
     }
     fgets(user_input, (columns+1), stdin);
+    while(getchar()!= '\n');
     char* user_input_nums = (char*)calloc(columns, columns*sizeof(char));
     if(user_input_nums==NULL){
         return NULL;
@@ -208,7 +212,6 @@ int main()
         printf("4. Quit\n");
         printf("Enter your choice:\n");
         scanf("%d", &choice);
-
         switch (choice) {
             case 1:
                 rule = 110; 
@@ -222,7 +225,6 @@ int main()
                 else{
                     run(current_gen, last_gen, columns, rows, rule);
                 }
-
                 reset_generation(last_gen, columns);
                 reset_generation(current_gen, columns);
                 break;
@@ -231,7 +233,6 @@ int main()
                 rule = (rand()%256); 
                 random_fill_generation(current_gen, columns);
 
-                // make this a funtion since its ugly in here
                 print = get_int("Would you like to print the results to a file? 1=Y, 2+ = N");
                 if(print == 1){
                     run_and_print(current_gen, last_gen, columns, rows, rule);
@@ -239,7 +240,6 @@ int main()
                 else{
                     run(current_gen, last_gen, columns, rows, rule);
                 }
-
                 reset_generation(last_gen, columns);
                 reset_generation(current_gen, columns);
                 break;
@@ -251,9 +251,11 @@ int main()
                 rule = (get_int("Enter desired rule to be adhered to"))%256;
                 printf("Enter desired seed generation in #s and blank spaces (enter 2 for stock seed generation) \n");
                 char* user_input = get_user_gen(columns);
+                if(user_input == NULL){
+                    return INVALID_INPUT_PARAMETER;
+                }
                 // add the bit to make it stock
 
-                // make this a funtion since its ugly in here
                 print = get_int("Would you like to print the results to a file? 1=Y, 2+=N");
                 if(print == 1){
                     run_and_print(user_input, last_gen, columns, rows, rule);
@@ -261,7 +263,6 @@ int main()
                 else{
                     run(user_input, last_gen, columns, rows, rule);
                 }
-                
                 free(user_input);
                 columns = 100;
                 rows = 100;
