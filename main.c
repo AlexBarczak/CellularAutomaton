@@ -1,12 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <ctype.h> 
 #include <time.h>
+#include <string.h>
 
 #define SUCCESS 100;
 #define INVALID_INPUT_PARAMETER 101;
 #define FILE_ERROR 102;
+
+int get_int(char variable[]){
+    int user_input=-1;
+    while(user_input<0){
+        printf("%s \n", variable);
+        scanf("%d", &user_input);
+        while(getchar()!= '\n');
+        if(user_input<0){
+            printf("Invalid input, try again\n");
+        }
+    }
+}
 
 char* init_generation(int size) {
     char* gen = (char*)calloc(size, size*sizeof(char));
@@ -25,7 +37,6 @@ int reset_generation(char* gen, int columns){
     }
     return SUCCESS;
 }
-
 
 int random_fill_generation(char* gen, int columns){
     if(gen == NULL){
@@ -73,11 +84,15 @@ void print_generation_to_file(char* state, int columns, FILE *fp){
     fprintf(fp, "\n");
 }
 
-int decimal_to_binary(int decimal, char* binary){
-    // maybe an input error check
+// what if bigger than 8 byte binary? If we were using it for this we would just mod the decimal number and cap it at 255 but not sure more generally
+int* decimal_to_binary(){
+    int decimal = get_int("Enter decimal number you would like to return in binary");
     int remainder; 
     int leftover = decimal;
-    // prob change so it works for bigger nums
+    int* binary = (int*)malloc(8*sizeof(int));
+    if(binary==NULL){
+        return NULL;
+    }
     for(int i = 7;i>-1;i--){
         // find value of byte starting with rightmost
         remainder = leftover%2;
@@ -86,28 +101,31 @@ int decimal_to_binary(int decimal, char* binary){
         // get rid of that byte as we have processed it
         leftover = leftover/2;
     }
-    return SUCCESS;
+    return binary;
 }
 
 int binary_to_decimal(char num[]){
-    if(isdigit(num[0])){
-        int binary = atoi(num);
-        int decimal = 0;
-        int power_of_two=1;
-        while(binary!=0){
-            // get rightmost value
-            int last_byte = binary%10;
-            // get rid of rightmost value now that we have it
-            binary = binary/10;
-            // do rightmost value multiplied by corresponding power of 2 and add to total
-            decimal = decimal + (last_byte*power_of_two);
-            // increase power of 2 by 1 power of 2
-            power_of_two = power_of_two << 1;
+    // check all of input is valid and if not return error
+    for(int i = 0; i<strlen(num)-1;i++){
+        if(num[i]!=1 || num[i]!=0){
+            return INVALID_INPUT_PARAMETER;
         }
     }
-    else
-        return INVALID_INPUT_PARAMETER;
-    return SUCCESS;
+    int decimal = 0;
+    int binary = atoi(num);
+    int power_of_two=1;
+    while(binary!=0){
+        // get rightmost value
+        int last_byte = binary%10;
+        // get rid of rightmost value now that we have it
+        binary = binary/10;
+        // do rightmost value multiplied by corresponding power of 2 and add to total
+        decimal = decimal + (last_byte*power_of_two);
+        // increase power of 2 by 1 power of 2
+        power_of_two = power_of_two << 1;
+    }
+        printf("%d\n",decimal);
+    return 0;
 }
 
 int run(char *current_gen, char *last_gen, int columns, int rows, int rule){
@@ -148,18 +166,6 @@ int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int 
     return SUCCESS;
 }
 
-int get_int(char variable[]){
-    int user_input=-1;
-    while(user_input<0){
-        printf("%s \n", variable);
-        scanf("%d", &user_input);
-        while(getchar()!= '\n');
-        if(user_input<0){
-            printf("Invalid input, try again\n");
-        }
-    }
-}
-
 char* resize_generation(char* gen, int size) {
     gen = (char*)realloc(gen, size*(sizeof(char)));
     if (gen == NULL) {
@@ -173,19 +179,40 @@ char* get_user_gen(int columns){
     if(user_input==NULL){
         return NULL;
     }
+    printf("Enter desired seed generation in #s and blank spaces (enter 2 for stock seed generation) \n");
     fgets(user_input, (columns+1), stdin);
-    while(getchar()!= '\n');
+    // from https://stackoverflow.com/questions/38767967/clear-input-buffer-after-fgets-in-c
+    // why does this work but just doing while getchar!=n doesnt quite work properly
+    if (strchr(user_input, '\n') == NULL)
+        while (getchar() != '\n'){
+            continue;
+        }
     char* user_input_nums = (char*)calloc(columns, columns*sizeof(char));
     if(user_input_nums==NULL){
         return NULL;
     }
+    if(user_input[0] == '2'){
+        user_input_nums[columns/2] = 1;
+        return user_input_nums;
+    }
     for(int i = 0;i<columns;i++){
         if(user_input[i] == '#'){
             user_input_nums[i] = 1;
+            continue;
         }
     }
     free(user_input);
     return user_input_nums;
+}
+
+void print_option(char *current_gen, char *last_gen, int columns, int rows, int rule){
+    int print = get_int("Would you like to print the results to a file? 1 = Yes, 2+ = No");
+    if(print == 1){
+        run_and_print(current_gen, last_gen, columns, rows, rule);
+    }
+    else{
+        run(current_gen, last_gen, columns, rows, rule);
+    }
 }
 
 int main()
@@ -193,7 +220,6 @@ int main()
     int rule;
     int columns=100; 
     int rows=100;
-    int print;
     char* last_gen = init_generation(columns);
     char* current_gen = init_generation(columns);
     if(current_gen == NULL || last_gen == NULL)
@@ -201,30 +227,18 @@ int main()
         return INVALID_INPUT_PARAMETER;
     }
     srand(time(NULL));
-
-    int choice;
-
     while (1) {
         printf("---- Menu ----\n");
         printf("1. Print a stock 1D Cellular automaton\n");
         printf("2. Print a random 1D cellular automaton\n");
         printf("3. Print your choice of 1D cellular automaton\n");
         printf("4. Quit\n");
-        printf("Enter your choice:\n");
-        scanf("%d", &choice);
+        int choice = get_int("Enter your choice:");
         switch (choice) {
             case 1:
                 rule = 110; 
                 current_gen[columns/2] = 1;
-
-                // make this a funtion since its ugly in here
-                print = get_int("Would you like to print the results to a file? 1=Y, 2+ = N");
-                if(print == 1){
-                    run_and_print(current_gen, last_gen, columns, rows, rule);
-                }
-                else{
-                    run(current_gen, last_gen, columns, rows, rule);
-                }
+                print_option(current_gen, last_gen, columns, rows, rule);
                 reset_generation(last_gen, columns);
                 reset_generation(current_gen, columns);
                 break;
@@ -232,14 +246,7 @@ int main()
                 // from https://www.geeksforgeeks.org/generating-random-number-range-c/
                 rule = (rand()%256); 
                 random_fill_generation(current_gen, columns);
-
-                print = get_int("Would you like to print the results to a file? 1=Y, 2+ = N");
-                if(print == 1){
-                    run_and_print(current_gen, last_gen, columns, rows, rule);
-                }
-                else{
-                    run(current_gen, last_gen, columns, rows, rule);
-                }
+                print_option(current_gen, last_gen, columns, rows, rule);
                 reset_generation(last_gen, columns);
                 reset_generation(current_gen, columns);
                 break;
@@ -249,20 +256,11 @@ int main()
                 reset_generation(last_gen, columns);
                 rows = get_int("Enter desired number of generations to run");
                 rule = (get_int("Enter desired rule to be adhered to"))%256;
-                printf("Enter desired seed generation in #s and blank spaces (enter 2 for stock seed generation) \n");
                 char* user_input = get_user_gen(columns);
                 if(user_input == NULL){
                     return INVALID_INPUT_PARAMETER;
                 }
-                // add the bit to make it stock
-
-                print = get_int("Would you like to print the results to a file? 1=Y, 2+=N");
-                if(print == 1){
-                    run_and_print(user_input, last_gen, columns, rows, rule);
-                }
-                else{
-                    run(user_input, last_gen, columns, rows, rule);
-                }
+                print_option(user_input, last_gen, columns, rows, rule);
                 free(user_input);
                 columns = 100;
                 rows = 100;
