@@ -7,7 +7,9 @@
 #define SUCCESS 100;
 #define INVALID_INPUT_PARAMETER 101;
 #define FILE_ERROR 102;
+#define MEMORY_ALLOCATION_FAILURE 203;
 
+// helper function to get user input integer
 int get_int(char variable[]){
     int user_input=-1;
     while(user_input<0){
@@ -20,6 +22,7 @@ int get_int(char variable[]){
     }
 }
 
+// initialise a generation of cells to a set size
 char* init_generation(int size) {
     char* gen = (char*)calloc(size, size*sizeof(char));
     if (gen == NULL) {
@@ -28,9 +31,10 @@ char* init_generation(int size) {
     return gen;
 }
 
+// return a generation of cells to blank
 int reset_generation(char* gen, int columns){
     if(gen == NULL){
-        return INVALID_INPUT_PARAMETER;
+        return MEMORY_ALLOCATION_FAILURE;
     }
     for (int i = 0; i < columns; i++){
         gen[i] = 0;
@@ -38,9 +42,10 @@ int reset_generation(char* gen, int columns){
     return SUCCESS;
 }
 
+// randomly fill a generation with 1s and 0s
 int random_fill_generation(char* gen, int columns){
     if(gen == NULL){
-        return INVALID_INPUT_PARAMETER;
+        return MEMORY_ALLOCATION_FAILURE;
     }
     else{
         for(int i = 0; i <columns;i++)
@@ -53,7 +58,6 @@ void calculate_next_generation(char* previous, char* current, char rule_byte, in
      for (int i = columns; i < 2*columns; i++){
         // determine which of the eight breeding rules apply
         char state_byte = (previous[(i-1)%columns] << 2) + (previous[i%columns] << 1) + (previous[(i+1)%columns]);
-
         if(((rule_byte >> state_byte) & 1) == 1){
             current[i%columns] = 1;
             continue;
@@ -64,11 +68,11 @@ void calculate_next_generation(char* previous, char* current, char rule_byte, in
 
 void print_generation(char* state, int columns){
     for (int i = 0; i < columns; i++){
-	if(state[i] == 1){
-	    printf("#");
-	}else{
-	    printf(" ");
-	}
+	    if(state[i] == 1){
+	        printf("#");
+	    }else{
+	        printf(" ");
+	    }
     }
     printf("\n");
 }
@@ -124,8 +128,7 @@ int binary_to_decimal(char num[]){
         // increase power of 2 by 1 power of 2
         power_of_two = power_of_two << 1;
     }
-        printf("%d\n",decimal);
-    return 0;
+    return decimal;
 }
 
 int run(char *current_gen, char *last_gen, int columns, int rows, int rule){
@@ -169,15 +172,16 @@ int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int 
 char* resize_generation(char* gen, int size) {
     gen = (char*)realloc(gen, size*(sizeof(char)));
     if (gen == NULL) {
-        return NULL;
+        return MEMORY_ALLOCATION_FAILURE;
     }
     return gen;
 }
 
+// allow user to create a generation in a given size or opt for a stock generation
 char* get_user_gen(int columns){
     char* user_input = (char*)malloc((columns+1)*sizeof(char));
     if(user_input==NULL){
-        return NULL;
+        return MEMORY_ALLOCATION_FAILURE;
     }
     printf("Enter desired seed generation in #s and blank spaces (enter 2 for stock seed generation) \n");
     fgets(user_input, (columns+1), stdin);
@@ -189,7 +193,7 @@ char* get_user_gen(int columns){
         }
     char* user_input_nums = (char*)calloc(columns, columns*sizeof(char));
     if(user_input_nums==NULL){
-        return NULL;
+        return MEMORY_ALLOCATION_FAILURE;
     }
     if(user_input[0] == '2'){
         user_input_nums[columns/2] = 1;
@@ -205,6 +209,7 @@ char* get_user_gen(int columns){
     return user_input_nums;
 }
 
+// helper function to get users decision on whether the CA should print to a file
 void print_option(char *current_gen, char *last_gen, int columns, int rows, int rule){
     int print = get_int("Would you like to print the results to a file? 1 = Yes, 2+ = No");
     if(print == 1){
@@ -224,7 +229,7 @@ int main()
     char* current_gen = init_generation(columns);
     if(current_gen == NULL || last_gen == NULL)
     {
-        return INVALID_INPUT_PARAMETER;
+        return MEMORY_ALLOCATION_FAILURE;
     }
     srand(time(NULL));
     while (1) {
@@ -257,9 +262,6 @@ int main()
                 rows = get_int("Enter desired number of generations to run");
                 rule = (get_int("Enter desired rule to be adhered to"))%256;
                 char* user_input = get_user_gen(columns);
-                if(user_input == NULL){
-                    return INVALID_INPUT_PARAMETER;
-                }
                 print_option(user_input, last_gen, columns, rows, rule);
                 free(user_input);
                 columns = 100;
@@ -278,4 +280,3 @@ int main()
     free(last_gen);
     free(current_gen);
     return SUCCESS;
-}
