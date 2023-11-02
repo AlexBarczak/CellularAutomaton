@@ -7,7 +7,7 @@
 #define SUCCESS 100;
 #define INVALID_INPUT_PARAMETER 101;
 #define FILE_ERROR 102;
-#define MEMORY_ALLOCATION_FAILURE 203;
+#define MEMORY_ALLOCATION_FAILURE 103;
 
 // helper function to get user input integer
 int get_int(char variable[]){
