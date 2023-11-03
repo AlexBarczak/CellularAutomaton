@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
 #include "life.h"
 
 int initialize_board(char** board, int width, int height){
@@ -51,8 +52,10 @@ int count_neighbours(char** board, int y, int x, int width, int height){
             if (xOff == yOff && xOff == 0){
                 continue;
             }
-            
-            count += board[(y+yOff)%height][(x+xOff)%width];
+
+            if (board[(y+yOff)%height][(x+xOff)%width] == 1){
+                count++;
+            }
         }
     }
     return count;
@@ -121,12 +124,7 @@ void run_life(int width, int height, int length){
 
     system("clear");
     print_board(current_board, width, height);
-    nanosleep(&request, &remaining);
-    if (length < 0)
-    {
-        length = __INT32_MAX__;
-    }
-    
+    nanosleep(&request, &remaining);    
     for(int i = 0; i < length; i++){
         system("clear");
         char** temp = previous_board;
