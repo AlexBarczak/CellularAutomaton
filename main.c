@@ -3,6 +3,7 @@
 #include <ctype.h> 
 #include <time.h>
 #include <string.h>
+#include "life.h"
 
 #define SUCCESS 100;
 #define INVALID_INPUT_PARAMETER 101;
@@ -25,9 +26,6 @@ int get_int(char variable[]){
 // initialise a generation of cells to a set size
 char* init_generation(int size) {
     char* gen = (char*)calloc(size, size*sizeof(char));
-    if (gen == NULL) {
-        return NULL;
-    }
     return gen;
 }
 
@@ -169,19 +167,11 @@ int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int 
     return SUCCESS;
 }
 
-char* resize_generation(char* gen, int size) {
-    gen = (char*)realloc(gen, size*(sizeof(char)));
-    if (gen == NULL) {
-        return MEMORY_ALLOCATION_FAILURE;
-    }
-    return gen;
-}
-
 // allow user to create a generation in a given size or opt for a stock generation
 char* get_user_gen(int columns){
     char* user_input = (char*)malloc((columns+1)*sizeof(char));
     if(user_input==NULL){
-        return MEMORY_ALLOCATION_FAILURE;
+        return NULL;
     }
     printf("Enter desired seed generation in #s and blank spaces (enter 2 for stock seed generation) \n");
     fgets(user_input, (columns+1), stdin);
@@ -193,7 +183,7 @@ char* get_user_gen(int columns){
         }
     char* user_input_nums = (char*)calloc(columns, columns*sizeof(char));
     if(user_input_nums==NULL){
-        return MEMORY_ALLOCATION_FAILURE;
+        return NULL;
     }
     if(user_input[0] == '2'){
         user_input_nums[columns/2] = 1;
@@ -229,6 +219,7 @@ int main()
     char* current_gen = init_generation(columns);
     if(current_gen == NULL || last_gen == NULL)
     {
+        printf("not enough memory...");
         return MEMORY_ALLOCATION_FAILURE;
     }
     srand(time(NULL));
@@ -238,6 +229,8 @@ int main()
         printf("2. Print a random 1D cellular automaton\n");
         printf("3. Print your choice of 1D cellular automaton\n");
         printf("4. Quit\n");
+        printf("!!! BONUS STUFF !!!\n");
+        printf("5. Run Conway's Game of Life\n");
         int choice = get_int("Enter your choice:");
         switch (choice) {
             case 1:
@@ -257,21 +250,39 @@ int main()
                 break;
             case 3:
                 columns = get_int("Enter desired number of cells per generation");
-                last_gen = resize_generation(last_gen, columns);
+                last_gen = (char*)realloc(last_gen, columns*(sizeof(char)));
+                if (last_gen == NULL){
+                    printf("Not enough memory");
+                    return MEMORY_ALLOCATION_FAILURE;
+                }
                 reset_generation(last_gen, columns);
                 rows = get_int("Enter desired number of generations to run");
                 rule = (get_int("Enter desired rule to be adhered to"))%256;
                 char* user_input = get_user_gen(columns);
+                if (user_input == NULL){
+                    printf("not enough memory...");
+                }
+                
                 print_option(user_input, last_gen, columns, rows, rule);
                 free(user_input);
                 columns = 100;
                 rows = 100;
-                last_gen = resize_generation(last_gen, columns);
+                last_gen = (char*)realloc(last_gen, columns*(sizeof(char)));
+                if (last_gen == NULL){
+                    printf("Not enough memory");
+                    return MEMORY_ALLOCATION_FAILURE;
+                }
                 reset_generation(last_gen, columns);
                 break;
             case 4:
                 printf("Goodbye!\n");
                 return SUCCESS;
+            case 5:
+                int life_height = get_int("Enter desired height of simulation: ");
+                int life_width = get_int("Enter desired width of simulation: ");
+                int life_length = get_int("Enter desired time steps of simulation: ");
+                run_life(life_width, life_height, life_length);
+                break;
             default:
                 printf("Invalid choice. Please enter a valid option.\n");
                 while(getchar()!= '\n');

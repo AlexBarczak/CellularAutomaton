@@ -1,55 +1,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include "life.h"
 
-#define WIDTH 40
-#define HEIGHT 40
+int initialize_board(char** board, int width, int height){
 
-typedef struct board
-{
-    char ** board;   
-} Board;
-
-
-int initialize_board(Board* board, int isRand){
-
-    board->board = NULL;
-    board->board = (char**)malloc(sizeof(char*)*HEIGHT);
-
-    if (board->board == NULL){
+    if (board == NULL){
         printf("\nmemory allocation issue\naborting...\n");
         return 1;
     }
 
-    for (int i = 0; i < HEIGHT; i++){
-        board->board[i] = NULL;
-        board->board[i] = (char*)malloc(sizeof(char) * WIDTH);
-        if (board->board[i] == NULL)
+    for (int i = 0; i < height; i++){
+        board[i] = NULL;
+        board[i] = (char*)malloc(sizeof(char) * width);
+        if (board[i] == NULL)
         {
             printf("\nmemory allocation issue\naborting...\n");
             return 1;
         }
-        for (int j = 0; j < WIDTH; j++)
+        for (int j = 0; j < width; j++)
         {
-            if (isRand)
-            {
-                board->board[i][j] = rand()%2;
-                continue;
-            }
-            
-            board->board[i][j] = 0;
+            board[i][j] = rand()%2;
         }
     }
 
     return 0;
 }
 
-void print_board(Board* board){
-    for (int i = 0; i < HEIGHT; i++)
+void print_board(char** board, int width, int height){
+    for (int i = 0; i < height; i++)
     {
-        for (int j = 0; j < WIDTH; j++)
+        for (int j = 0; j < width; j++)
         {
-            if (board->board[i][j] == 0)
+            if (board[i][j] == 0)
             {
                 printf(" ");
                 continue;
@@ -61,7 +44,7 @@ void print_board(Board* board){
     return;
 }
 
-int count_neighbours(Board* board, int y, int x){
+int count_neighbours(char** board, int y, int x, int width, int height){
     int count = 0;
     for (int yOff = -1; yOff < 2; yOff++){
         for (int xOff = -1; xOff < 2; xOff++){
@@ -69,91 +52,91 @@ int count_neighbours(Board* board, int y, int x){
                 continue;
             }
             
-            count += board->board[(y+yOff)%HEIGHT][(x+xOff)%WIDTH];
+            count += board[(y+yOff)%height][(x+xOff)%width];
         }
     }
     return count;
 }
 
-void calculate_next_generation(Board* new_board, Board* old_board){
-    for(int i = HEIGHT; i < 2*HEIGHT; i++){
-        for(int j = WIDTH; j < 2*WIDTH; j++){
-            int neighbours = count_neighbours(old_board, i, j);
+void life_calculate_next_generation(char** new_board, char** old_board, int width, int height){
+    for(int i = height; i < 2*height; i++){
+        for(int j = width; j < 2*width; j++){
+            int neighbours = count_neighbours(old_board, i, j, width, height);
             
             // if alive cell
-            if (old_board->board[i%HEIGHT][j%WIDTH] == 1)
+            if (old_board[i%height][j%width] == 1)
             {
                 if (neighbours < 2 || neighbours > 3){
-                    new_board->board[i%HEIGHT][j%WIDTH] = 0;
+                    new_board[i%height][j%width] = 0;
                     continue;
                 }
-                new_board->board[i%HEIGHT][j%WIDTH] = 1;
+                new_board[i%height][j%width] = 1;
                 continue;
             }
             
             // if dead cell
             if (neighbours == 3){
-                new_board->board[i%HEIGHT][j%WIDTH] = 1;
+                new_board[i%height][j%width] = 1;
                 continue;
             }
-            new_board->board[i%HEIGHT][j%WIDTH] = 0;                    
+            new_board[i%height][j%width] = 0;                    
         }
     }
 }
 
 
-int main(void){
+void run_life(int width, int height, int length){
     srand(time(NULL));
 
     // game of life consists of a 2d array of positions filled with a number of cells in alive or dead 'states'
     // these will be denoted with a value of 0 or 1
-    Board* current_board;
-    Board* previous_board;
+    char** current_board = NULL;
+    char** previous_board = NULL;
 
-    current_board = (Board*)malloc(sizeof(Board));
+    current_board = (char**)malloc(sizeof(char*)*height);
 
     if (current_board == NULL){
         printf("\nmemory allocation issue\naborting...\n");
-        return 1;
+        return;
     }
-    previous_board = (Board*)malloc(sizeof(Board));
+    previous_board = (char**)malloc(sizeof(char*)*height);
 
     if (previous_board == NULL){
         printf("\nmemory allocation issue\naborting...\n");
-        return 1;
+        return;
     }
 
-    if (initialize_board(current_board, 1) == 1)
+    if (initialize_board(current_board, width, height) == 1)
     {
         printf("bad");
-        return 1;
+        return;
     }
-    if (initialize_board(previous_board, 1) == 1)
+    if (initialize_board(previous_board, width, height) == 1)
     {
         printf("bad");
-        return 1;
-    }    
-
-    // making a glider to test for good behaviour in the simulation
-    current_board->board[2+15][0+15] = 1;
-    current_board->board[2+15][1+15] = 1;
-    current_board->board[2+15][2+15] = 1;
-    current_board->board[1+15][2+15] = 1;
-    current_board->board[0+15][1+15] = 1;
+        return;
+    }
 
     struct timespec remaining, request = { 0, 50000000 };
 
     system("clear");
-    print_board(current_board);
+    print_board(current_board, width, height);
     nanosleep(&request, &remaining);
-    while(1){
+    if (length < 0)
+    {
+        length = __INT32_MAX__;
+    }
+    
+    for(int i = 0; i < length; i++){
         system("clear");
-        Board *temp = previous_board;
+        char** temp = previous_board;
         previous_board = current_board;
         current_board = temp;
-        calculate_next_generation(current_board, previous_board);
-        print_board(current_board);
+        life_calculate_next_generation(current_board, previous_board, width, height);
+        print_board(current_board, width, height);
         nanosleep(&request, &remaining);
     }
 
+    free(current_board);
+    free(previous_board);
 }
