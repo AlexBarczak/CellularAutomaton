@@ -4,6 +4,7 @@
 #include <time.h>
 #include <string.h>
 
+
 #define SUCCESS 100;
 #define INVALID_INPUT_PARAMETER 101;
 #define FILE_ERROR 102;
@@ -218,6 +219,11 @@ void print_option(char *current_gen, char *last_gen, int columns, int rows, int 
     else{
         run(current_gen, last_gen, columns, rows, rule);
     }
+
+    free(last_generation->cells);
+    free(current_generation->cells);
+    free(last_generation);
+    free(current_generation);
 }
 
 int main()
