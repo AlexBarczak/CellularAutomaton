@@ -4,6 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include "life.h"
+#include "brians_brain.h"
 
 #define SUCCESS 100;
 #define INVALID_INPUT_PARAMETER 101;
@@ -231,6 +232,7 @@ int main()
         printf("4. Quit\n");
         printf("!!! BONUS STUFF !!!\n");
         printf("5. Run Conway's Game of Life\n");
+        printf("6. Run Brian's Brain");
         int choice = get_int("Enter your choice:");
         switch (choice) {
             case 1:
@@ -282,6 +284,12 @@ int main()
                 int life_width = get_int("Enter desired width of simulation: ");
                 int life_length = get_int("Enter desired time steps of simulation: ");
                 run_life(life_width, life_height, life_length);
+                break;
+            case 6:
+                int bb_height = get_int("Enter desired height of simulation: ");
+                int bb_width = get_int("Enter desired width of simulation: ");
+                int bb_length = get_int("Enter desired time steps of simulation: ");
+                run_brians_brain(bb_height, bb_width, bb_length);
                 break;
             default:
                 printf("Invalid choice. Please enter a valid option.\n");
