@@ -232,7 +232,7 @@ int main()
         printf("4. Quit\n");
         printf("!!! BONUS STUFF !!!\n");
         printf("5. Run Conway's Game of Life\n");
-        printf("6. Run Brian's Brain");
+        printf("6. Run Brian's Brain\n");
         int choice = get_int("Enter your choice:");
         switch (choice) {
             case 1:
