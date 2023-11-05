@@ -6,10 +6,10 @@
 #include "life.h"
 #include "brians_brain.h"
 
-#define SUCCESS 100;
-#define INVALID_INPUT_PARAMETER 101;
-#define FILE_ERROR 102;
-#define MEMORY_ALLOCATION_FAILURE 103;
+#define SUCCESS 100
+#define INVALID_INPUT_PARAMETER 101
+#define FILE_ERROR 102
+#define MEMORY_ALLOCATION_FAILURE 103
 
 // helper function to get user input integer
 int get_int(char variable[]){
@@ -147,22 +147,25 @@ int run(char *current_gen, char *last_gen, int columns, int rows, int rule){
 int run_and_print(char *current_gen, char *last_gen, int columns, int rows, int rule){
     struct timespec remaining, request = { 0, 16000000 };
     FILE *fp = NULL;
-    fp = fopen("cellular-automata.txt", "w");
-    if(fp!=NULL){
+
+    char file_name[256];
+    printf("Enter the file name:");
+    scanf("%s", file_name);
+
+    fp = fopen(file_name, "w");
+    if(fp==NULL){
+        return FILE_ERROR;
+    }
+    print_generation(current_gen, columns);
+    print_generation_to_file(current_gen, columns, fp);
+    for (int i = 0; i < rows-1; i++){
+        char *temp = last_gen;
+        last_gen = current_gen;
+        current_gen = temp;
+        calculate_next_generation(last_gen, current_gen, rule, columns);
         print_generation(current_gen, columns);
         print_generation_to_file(current_gen, columns, fp);
-        for (int i = 0; i < rows-1; i++){
-            char *temp = last_gen;
-            last_gen = current_gen;
-            current_gen = temp;
-            calculate_next_generation(last_gen, current_gen, rule, columns);
-            print_generation(current_gen, columns);
-            print_generation_to_file(current_gen, columns, fp);
-            nanosleep(&request, &remaining);
-        }
-    }
-    else{
-        return FILE_ERROR;
+        nanosleep(&request, &remaining);
     }
     fclose(fp);
     return SUCCESS;
@@ -204,7 +207,11 @@ char* get_user_gen(int columns){
 void print_option(char *current_gen, char *last_gen, int columns, int rows, int rule){
     int print = get_int("Would you like to print the results to a file? 1 = Yes, 2+ = No");
     if(print == 1){
-        run_and_print(current_gen, last_gen, columns, rows, rule);
+        if (run_and_print(current_gen, last_gen, columns, rows, rule) == FILE_ERROR)
+        {
+            printf("an error occured opening the file, try again");
+        }
+        
     }
     else{
         run(current_gen, last_gen, columns, rows, rule);
@@ -232,7 +239,7 @@ int main()
         printf("4. Quit\n");
         printf("!!! BONUS STUFF !!!\n");
         printf("5. Run Conway's Game of Life\n");
-        printf("6. Run Brian's Brain");
+        printf("6. Run Brian's Brain\n");
         int choice = get_int("Enter your choice:");
         switch (choice) {
             case 1:
